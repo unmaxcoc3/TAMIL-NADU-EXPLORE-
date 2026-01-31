@@ -1,11 +1,20 @@
-<div align="center">
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+# TAMIL NADU EXPLORE
 
-  <h1>Built with AI Studio</h2>
+A centralized discovery platform for Tamil Nadu, built with React and Vite.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Deployment Steps
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+1. **GitHub**: Push these files to a new GitHub repository.
+2. **Vercel**:
+   - Create a new project in Vercel.
+   - Import your repository.
+   - **Environment Variables**: Add `API_KEY` in the project settings. This key is required for the discovery engine to work.
+   - **Framework**: Vercel will automatically detect Vite.
+3. **Build**: Vercel will run `npm run build` and deploy your site.
 
-</div>
+## Technical Details
+- **Frontend**: React (ES6 Modules)
+- **Styling**: Tailwind CSS
+- **Discovery**: Gemini-powered searches
+- **Icons**: Lucide React

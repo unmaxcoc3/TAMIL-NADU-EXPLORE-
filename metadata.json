@@ -1,0 +1,7 @@
+{
+  "name": "TAMIL NADU EXPLORE",
+  "description": "The ultimate centralized platform for discovering travel spots, food gems, events, and activities across Chennai and Tamil Nadu.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
