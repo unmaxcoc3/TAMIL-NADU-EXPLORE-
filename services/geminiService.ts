@@ -1,34 +1,43 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Category, Recommendation } from "../types";
+import { Category, Recommendation, District } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-export const getAIGuideResponse = async (query: string, category: string, location?: { lat: number, lng: number }) => {
+export const getAIGuideResponse = async (
+  query: string, 
+  category: string, 
+  district: District,
+  location?: { lat: number, lng: number }
+) => {
+  // Use process.env.API_KEY directly as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = 'gemini-3-flash-preview';
   
   const systemInstruction = `
-    You are 'TAMIL NADU EXPLORE Guide', a local expert for Chennai and the entire Tamil Nadu state. 
-    Your goal is to help users find the best things to do, eat, and see.
-    Focus on: ${category}.
-    User Query: ${query}.
-    Current User Coordinates: ${location ? `Lat: ${location.lat}, Lng: ${location.lng}` : 'Not provided'}.
-    
-    CRITICAL: For every place, you MUST identify the specific 'area' (e.g., 'T. Nagar', 'Adyar', 'Mylapore', 'Anna Nagar' for Chennai; or 'Kodaikanal Lake Area', 'East Coast Road' for state-wide spots).
-    Also, categorize the price as: 'Free', 'Budget', 'Mid-range', or 'Premium'.
+    You are 'TAMIL NADU EXPLORE Guide', a world-class tourism expert for the state of Tamil Nadu, India.
+    Current Context:
+    - Target District: ${district}
+    - Category focus: ${category}
+    - Search Query: ${query}
+    - Location: ${location ? `Lat: ${location.lat}, Lng: ${location.lng}` : 'Not provided'}
 
-    Provide a JSON array of recommendations. 
-    Each object must strictly follow this structure:
+    Rules:
+    1. If a district is specified, strictly prioritize results in that district.
+    2. Provide authentic local suggestions (hidden gems, heritage sites, local eateries).
+    3. Include both English and Tamil names for the place if possible.
+    
+    Response MUST be a JSON array of objects:
     {
-      "id": "unique-slug",
-      "name": "Name of the place",
-      "category": "The specific category from the user request",
-      "description": "Engaging 1-2 sentence description",
-      "location": "A more detailed address or specific spot location",
-      "area": "The neighborhood or town name (e.g., Ooty, Besant Nagar)",
-      "priceCategory": "Free | Budget | Mid-range | Premium",
-      "cost": "Specific pricing info (e.g., ₹200 entry, or ₹800 for two)",
-      "bestTime": "Best time/season to visit",
+      "id": "slug",
+      "name": "English Name",
+      "nameTamil": "தமிழ் பெயர்",
+      "category": "Category Name",
+      "description": "Engaging description",
+      "location": "Address",
+      "area": "Neighborhood/Town",
+      "district": "The District name",
+      "priceCategory": "Free|Budget|Mid-range|Premium",
+      "cost": "Pricing details",
+      "bestTime": "Best visit window",
       "rating": 1-5
     }
   `;
@@ -36,7 +45,7 @@ export const getAIGuideResponse = async (query: string, category: string, locati
   try {
     const response = await ai.models.generateContent({
       model,
-      contents: `Find recommendations for: ${query} in ${category} category in Tamil Nadu. Ensure each has an area and price category.`,
+      contents: `Find the best ${category} in ${district === 'All' ? 'Tamil Nadu' : district} related to: ${query}`,
       config: {
         systemInstruction,
         responseMimeType: "application/json",
@@ -48,22 +57,25 @@ export const getAIGuideResponse = async (query: string, category: string, locati
             properties: {
               id: { type: Type.STRING },
               name: { type: Type.STRING },
+              nameTamil: { type: Type.STRING },
               category: { type: Type.STRING },
               description: { type: Type.STRING },
               location: { type: Type.STRING },
               area: { type: Type.STRING },
+              district: { type: Type.STRING },
               priceCategory: { type: Type.STRING },
               cost: { type: Type.STRING },
               bestTime: { type: Type.STRING },
               rating: { type: Type.NUMBER }
             },
-            required: ["id", "name", "category", "description", "location", "area", "priceCategory"]
+            required: ["id", "name", "category", "description", "area", "district", "priceCategory"]
           }
         }
       }
     });
 
-    const jsonStr = response.text.trim();
+    // Access .text property directly (not as a method)
+    const jsonStr = response.text?.trim() || "[]";
     const results: any[] = JSON.parse(jsonStr);
     
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
@@ -75,8 +87,10 @@ export const getAIGuideResponse = async (query: string, category: string, locati
       ...r,
       links: links.slice(0, 3)
     })) as Recommendation[];
-  } catch (error) {
-    console.error("Gemini API Error:", error);
+  } catch (error: any) {
+    if (error.message?.includes('403') || error.message?.includes('401')) {
+       throw new Error("API_KEY_INVALID");
+    }
     throw error;
   }
 };
