@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, Sparkles, ChevronRight, Compass, Utensils, Calendar, Tv, ShoppingBag, Zap, LayoutGrid, Globe, X, Mountain, Map, Palmtree, Ticket, Activity, Clapperboard, ShoppingCart, Waves, Gem, Landmark, Coffee, Flame, IceCream, Music, Mic2, GraduationCap, Presentation, TreePine, Sailboat, Tent, FerrisWheel, Joystick, Disc, Glasses, DoorOpen, ShoppingBasket, Store, BookOpen, Warehouse, Clock, RotateCcw } from 'lucide-react';
+import { Search, MapPin, Loader2, Sparkles, ChevronRight, Compass, Utensils, Calendar, Tv, ShoppingBag, Zap, LayoutGrid, Globe, X, Mountain, Map, Palmtree, Ticket, Activity, Clapperboard, ShoppingCart, Waves, Gem, Landmark, Coffee, Flame, IceCream, Music, Mic2, GraduationCap, Presentation, TreePine, Sailboat, Tent, FerrisWheel, Joystick, Disc, Glasses, DoorOpen, ShoppingBasket, Store, BookOpen, Warehouse, Clock, RotateCcw, RefreshCw } from 'lucide-react';
 import { Category, SearchState, Recommendation, District, Language, CATEGORY_LABELS } from './types';
 import { RecommendationCard } from './components/RecommendationCard';
 import { PlaceDetail } from './components/PlaceDetail';
@@ -59,6 +59,54 @@ const DISTRICT_HIGHLIGHTS: Record<District, string> = {
   'Tenkasi': 'Cascading waterfalls and adventurous hill trekking.',
   'Kanyakumari': 'Southernmost tip sunrise, Vivekananda Rock, and beach sunsets.'
 };
+
+const FEATURED_PLACES: Recommendation[] = [
+  {
+    id: 'brihadisvara-temple',
+    name: 'Brihadisvara Temple',
+    nameTamil: 'தஞ்சை பெரிய கோவில்',
+    category: Category.TRAVEL,
+    district: 'Thanjavur',
+    description: 'A 1000-year-old architectural marvel built by Raja Raja Chola I, featuring the tallest vimanam in the world.',
+    location: 'Membalam Rd, Balaji Nagar',
+    area: 'Thanjavur City',
+    priceCategory: 'Free',
+    cost: 'Free Entry',
+    bestTime: 'Early morning or Sunset',
+    rating: 4.9,
+    imageUrl: 'https://images.unsplash.com/photo-1581010866018-7d7283a80436?q=80&w=1200'
+  },
+  {
+    id: 'marina-beach',
+    name: 'Marina Beach',
+    nameTamil: 'மெரினா கடற்கரை',
+    category: Category.TRAVEL,
+    district: 'Chennai',
+    description: 'The second longest natural urban beach in the world, a landmark of Chennai known for its vibrant evening markets and sunset views.',
+    location: 'Marina Beach Road',
+    area: 'Triplicane',
+    priceCategory: 'Free',
+    cost: 'Free Entry',
+    bestTime: 'Early Morning or Late Evening',
+    rating: 4.5,
+    imageUrl: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?q=80&w=1200'
+  },
+  {
+    id: 'meenakshi-temple',
+    name: 'Meenakshi Amman Temple',
+    nameTamil: 'மதுரை மீனாட்சி அம்மன் கோவில்',
+    category: Category.TRAVEL,
+    district: 'Madurai',
+    description: 'A historic Hindu temple located on the southern bank of the Vaigai River in the temple city of Madurai.',
+    location: 'Madurai Main',
+    area: 'Central Madurai',
+    priceCategory: 'Free',
+    cost: 'Free Entry',
+    bestTime: 'Early Morning',
+    rating: 4.8,
+    imageUrl: 'https://images.unsplash.com/photo-1600100397561-433ff9b4dd91?q=80&w=1200'
+  }
+];
 
 interface SubCategory {
   name: string;
@@ -139,24 +187,6 @@ const HILL_STATIONS = [
   { name: 'Valparai', district: 'Coimbatore' as District },
 ];
 
-const FEATURED_PLACES: Recommendation[] = [
-  {
-    id: 'brihadisvara-temple',
-    name: 'Brihadisvara Temple',
-    nameTamil: 'தஞ்சை பெரிய கோவில்',
-    category: Category.TRAVEL,
-    district: 'Thanjavur',
-    description: 'A 1000-year-old architectural marvel built by Raja Raja Chola I, featuring the tallest vimanam in the world.',
-    location: 'Membalam Rd, Balaji Nagar',
-    area: 'Thanjavur City',
-    priceCategory: 'Free',
-    cost: 'Free Entry',
-    bestTime: 'Early morning or Sunset',
-    rating: 4.9,
-    imageUrl: 'https://images.unsplash.com/photo-1581010866018-7d7283a80436?q=80&w=1200'
-  }
-];
-
 const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('en');
   const [showDistrictPicker, setShowDistrictPicker] = useState(false);
@@ -172,7 +202,7 @@ const App: React.FC = () => {
     category: 'All',
     district: 'All',
     isLoading: false,
-    results: [],
+    results: FEATURED_PLACES,
     error: null,
   });
 
@@ -205,25 +235,35 @@ const App: React.FC = () => {
       query: customQuery && !query.includes(customQuery) ? customQuery : prev.query,
       category,
       district,
-      results: []
+      results: prev.results // Keep existing results while loading
     }));
 
     if (e || customCategory || customDistrict || customQuery) {
       resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // Refresh AI Tagline for new district/context
     refreshTagline(district === 'All' ? 'Tamil Nadu' : district);
 
     try {
       const fullQuery = district !== 'All' 
-        ? `${query || 'Attractions'} in ${district}. Context: ${DISTRICT_HIGHLIGHTS[district]}`
-        : query || "Trending spots in Tamil Nadu";
+        ? `${query || 'Top spots'} in ${district}`
+        : query || "Top discoveries in Tamil Nadu";
 
       const aiResults = await getAIGuideResponse(fullQuery, category as string, district, userLocation);
-      setSearch(prev => ({ ...prev, results: aiResults, isLoading: false }));
+      
+      setSearch(prev => ({ 
+        ...prev, 
+        results: aiResults.length > 0 ? aiResults : FEATURED_PLACES.filter(p => district === 'All' || p.district === district), 
+        isLoading: false 
+      }));
     } catch (err: any) {
-      setSearch(prev => ({ ...prev, isLoading: false, error: "Something went wrong while searching. Please try again." }));
+      console.error("Search failed, using featured data fallback", err);
+      setSearch(prev => ({ 
+        ...prev, 
+        isLoading: false, 
+        results: FEATURED_PLACES.filter(p => district === 'All' || p.district === district),
+        error: "AI search is currently unavailable. Showing curated recommendations." 
+      }));
     }
   };
 
@@ -464,7 +504,6 @@ const App: React.FC = () => {
                 </span>
               </h2>
               
-              {/* Dynamic AI Tagline */}
               <div className="h-8 flex items-center">
                 {loadingTagline ? (
                   <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
@@ -585,10 +624,18 @@ const App: React.FC = () => {
           </div>
 
           {search.error && (
-            <div className="mt-12 bg-orange-50 border-2 border-orange-100 p-8 rounded-[2rem] text-center max-w-2xl mx-auto shadow-sm">
-              <Sparkles className="w-8 h-8 text-orange-400 mx-auto mb-4" />
-              <p className="font-black text-orange-900 mb-2 uppercase tracking-wide">Guide Info</p>
-              <p className="text-sm text-orange-800/80 font-medium leading-relaxed">{search.error}</p>
+            <div className="mt-12 bg-white border-2 border-orange-100 p-8 rounded-[3rem] text-center max-w-2xl mx-auto shadow-xl">
+              <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <RefreshCw className="w-8 h-8" />
+              </div>
+              <p className="font-black text-slate-900 mb-2 uppercase tracking-wide">Guide Offline</p>
+              <p className="text-sm text-slate-500 font-medium leading-relaxed mb-6">{search.error}</p>
+              <button 
+                onClick={() => handleSearch()}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 text-white font-black rounded-xl hover:bg-orange-500 transition-all active:scale-95 uppercase text-xs tracking-widest"
+              >
+                <RefreshCw className="w-4 h-4" /> Retry AI Search
+              </button>
             </div>
           )}
         </section>
